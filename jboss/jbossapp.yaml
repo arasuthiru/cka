@@ -12,6 +12,10 @@ spec:
       labels:
         app: jboss-hello
     spec:
+      securityContext:
+        fsGroup: 185
+        runAsGroup: 185
+        runAsUser: 185
       containers:
       - name: jboss-hello-container
         image: quay.io/dnb_itsupport/myapp:latest
