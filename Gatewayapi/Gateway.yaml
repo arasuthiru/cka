@@ -1,9 +1,9 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: example-gateway
+  name: web-gateway
 spec:
-  gatewayClassName: example-class
+  gatewayClassName: istio-gateway-class
   listeners:
   - name: http
     protocol: HTTP
