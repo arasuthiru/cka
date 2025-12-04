@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jboss-hello-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jboss-hello
+  template:
+    metadata:
+      labels:
+        app: jboss-hello
+    spec:
+      containers:
+      - name: jboss-hello-container
+        image: quay.io/dnb_itsupport/myapp:latest
+        ports:
+        - containerPort: 8080
+        securityContext:
+          privileged: true
+        volumeMounts:
+         - name: jboss-pv-storage
+           mountPath: "/opt/eap/standalone/deployments"      
+      volumes:
+      - name: jboss-pv-storage
+        persistentVolumeClaim:
+         claimName: jboss-pv-claim
