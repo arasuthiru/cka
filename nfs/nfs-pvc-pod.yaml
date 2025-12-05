@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-using-pvc
+spec:
+  containers:
+  - name: app
+    image: alpine:latest
+    command: ["/bin/sh", "-c", "sleep 500000"]
+    volumeMounts:
+    - name: persistent-storage
+      mountPath: /data/nfs # The path inside the pod's container
+  volumes:
+  - name: persistent-storage
+    persistentVolumeClaim:
+      claimName: nfs-pvc # Name of your PVC

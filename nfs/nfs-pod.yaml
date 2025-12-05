@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-pod
+spec:
+  containers:
+  - name: nfs-container
+    image: nginx
+    volumeMounts:
+    - name: nfs-volume
+      mountPath: /usr/share/nginx/html # The path inside the container where the NFS share will be mounted
+  volumes:
+  - name: nfs-volume
+    nfs:
+      server: your-nfs-server-ip # IP address or hostname of your NFS server
+      path: /path/to/your/share # The path to the shared directory on the NFS server

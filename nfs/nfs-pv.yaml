@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+spec:
+  capacity:
+    storage: 1Gi # This value is arbitrary for pre-existing NFS volumes
+  accessModes:
+    - ReadWriteMany # Allows multiple pods to read/write
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "" # Use an empty string to avoid dynamic provisioning
+  nfs:
+    server: 192.168.150.129
+    path: /nfs/data1
