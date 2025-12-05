@@ -3,7 +3,7 @@ kind: Gateway
 metadata:
   name: web-gateway
 spec:
-  gatewayClassName: example-class
+  gatewayClassName: istio-gateway-class
   listeners:
   - name: http
     protocol: HTTP
