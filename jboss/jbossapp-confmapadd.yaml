@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jboss-hello-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jboss-hello
+  template:
+    metadata:
+      labels:
+        app: jboss-hello
+    spec:
+      securityContext:
+        fsGroup: 185
+        runAsGroup: 185
+        runAsUser: 185
+      containers:
+      - name: jboss-hello-container
+        image: quay.io/dnb_itsupport/myapp:latest
+        ports:
+        - containerPort: 8080
+        securityContext:
+          privileged: true
+        volumeMounts:
+         - name: jboss-pv-storage
+           mountPath: "/opt/eap/standalone/deployments"
+        volumeMounts:
+         - name: standalone-config-volume
+           mountPath: "/home/jboss/standalone-openshift.xml"
+           #mountPath: "/opt/eap/standalone/configuration/standalone-openshift.xml"
+           subPath: standalone-openshift.xml      
+      volumes:
+      - name: jboss-pv-storage
+        persistentVolumeClaim:
+         claimName: jboss-pv-claim
+      volumes:
+      - name: standalone-config-volume
+        configMap:
+          name: jboss-standalone-config         

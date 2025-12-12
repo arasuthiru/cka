@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jboss-hello-deployment
+  name: jboss-hello-deployment1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jboss-hello
+      app: jboss-hello1
   template:
     metadata:
       labels:
-        app: jboss-hello
+        app: jboss-hello1
     spec:
-      securityContext:
-        fsGroup: 185
-        runAsGroup: 185
-        runAsUser: 185
+      #securityContext:
+      #  fsGroup: 185
+     #   runAsGroup: 185
+      #  runAsUser: 185
       containers:
-      - name: jboss-hello-container
+      - name: jboss-hello-container1
         image: quay.io/dnb_itsupport/myapp:latest
         ports:
         - containerPort: 8080

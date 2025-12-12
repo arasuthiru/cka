@@ -19,3 +19,8 @@ configmap jboss standlon file
 example lin for confgmap mountpath
 https://stackoverflow.com/questions/43544370/kubernetes-how-to-set-volumemount-user-group-and-file-permissions
 
+als check this why pod environment variables showing other pod on google
+
+Production-Grade Kubernetes Architecture Explained - In 30 minutes
+https://github.com/gashok13193/DevOps-Docs/blob/main/Architecture/Architecture.md
+https://www.youtube.com/watch?v=_8gKkMQ2zxs

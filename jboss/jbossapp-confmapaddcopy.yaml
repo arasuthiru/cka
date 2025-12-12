@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jboss-hello-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jboss-hello
+  template:
+    metadata:
+      labels:
+        app: jboss-hello
+    spec:
+      securityContext:
+          fsGroup: 1100
+          runAsGroup: 1100
+          runAsUser: 1100
+      containers:
+      - name: jboss-hello-container
+        image: quay.io/dnb_itsupport/jbosseap74m:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: TZ
+          value: "Asia/Singapore" 
+        volumeMounts:
+         - name: jboss-pv-storage
+           mountPath: "/opt/jboss/jboss-eap-7.4/standalone/deployments"     
+         - name: standalone-config-volume
+           mountPath: "/opt/jboss/jboss-eap-7.4/standalone/configuration/standalone-full-ha.xml"           
+           subPath: standalone-full-ha.xml 
+      volumes:
+      - name: jboss-pv-storage
+        persistentVolumeClaim:
+         claimName: jboss-pv-claim
+      - name: standalone-config-volume
+        configMap:
+          name: standalone-full-ha-conf    

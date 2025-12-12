@@ -1,48 +1,42 @@
-app.py
+kubectl create configmap jboss-standalone-config --from-file=/path/to/your/standalone.xml
+kubectl create configmap jboss-standalone-config --from-file=standalone-full-ha.xml
 
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route('/')
-def hello():
-    return "Hello from Python in a Docker Container!"
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-	
-
-requirements.txt
-Flask
-
-
-Dockerfile
-
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim-buster
-
-# Set the working directory in the container
-WORKDIR /app
-
-# Copy the requirements file into the container
-COPY requirements.txt .
-
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code into the container
-COPY . .
-
-# Expose port 5000 for the Flask application
-EXPOSE 5000
-
-# Define the command to run the application
-CMD ["python", "app.py"]
-	
-
-docker build -t python-hello-app .
+     apiVersion: v1
+    kind: Pod
+    metadata:
+      name: jboss-eap-app
+    spec:
+      containers:
+      - name: jboss-eap-container
+        image: your-jboss-eap-image:latest
+        volumeMounts:
+        - name: jboss-config-volume
+          mountPath: /opt/jboss/eap/standalone/configuration/standalone.xml # Adjust path as needed
+          subPath: standalone.xml # Specifies to mount only the standalone.xml key from the ConfigMap
+      volumes:
+      - name: jboss-config-volume
+        configMap:
+          name: jboss-standalone-config
 
 
-docker tag python-hello-app:latest arasutkv/mydocker:latest
+#####
+spec:
+      securityContext:
+          fsGroup: 1100
+          runAsGroup: 1100
+          runAsUser: 1100
 
-docker push arasutkv/mydocker:latest
+chmod -R g+rw /mnt/data
+   76  ls -l /mnt/
+   77  ls -l /mnt/data/
+   78  chown -R 1100:1100 /mnt/data
+   79  ls -l /mnt/data/
+
+root@thiru-worker-node1:/mnt/data# ls -l /mnt/data/
+total 360
+-rw-rw-r-- 1 1100 1100 362042 Dec 12 23:39 counter.war
+-rw-r--r-- 1 1100 1100     11 Dec 12 23:39 counter.war.deployed
+-rw-rw-r-- 1 1100 1100      0 Dec 12 23:14 thiru
+root@thiru-worker-node1:/mnt/data#
+
+after change permission war file deployed.
