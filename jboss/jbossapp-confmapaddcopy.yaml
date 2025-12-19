@@ -21,9 +21,9 @@ spec:
         image: quay.io/dnb_itsupport/jbosseap74m:latest
         ports:
         - containerPort: 8080
-        env:
-        - name: TZ
-          value: "Asia/Singapore" 
+        #env:
+        #- name: TZ
+        #  value: "Asia/Singapore" 
         volumeMounts:
          - name: jboss-pv-storage
            mountPath: "/opt/jboss/jboss-eap-7.4/standalone/deployments"     
