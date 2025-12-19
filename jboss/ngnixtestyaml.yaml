@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ngnixtestyaml
+  labels:
+    app: ngnixtestyaml
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: ngnixtestyaml
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: ngnixtestyaml
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ngnixtestyaml
+  template:
+    metadata:
+      labels:
+        app: ngnixtestyaml
+    spec:
+      containers:
+        - name: ngnixtestyaml
+          image: nginx:latest
+          ports:
+            - containerPort: 80 
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ngnixtestyaml-config
+---
+apiVersion: v1  
+kind: ConfigMap
+metadata: 
+  name: ngnixtestyaml-config
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  1;
+
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        keepalive_timeout  65;
+
+        #gzip  on;
+
+        server {
+            listen       80;
+            server_name  localhost;
+
+            location / {
+                root   /usr/share/nginx/html;
+                index  index.html index.htm;
+            }
+
+            error_page   500 502 503 504  /50x.html;
+            location = /50x.html {
+                root   /usr/share/nginx/html;
+            }
+        }
+    }
+
+    
+
+
+
+
+
+
