@@ -45,3 +45,7 @@ Username: dnb_itsupport
 Password:
 Login Succeeded!
 [root@localhost jboss74]#
+
+#
+
+docker build --no-cache -t 

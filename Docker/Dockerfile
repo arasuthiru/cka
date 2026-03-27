@@ -5,6 +5,8 @@ FROM registry.redhat.io/ubi8/ubi-minimal:latest
 # Install the java-1.8.0-openjdk-devel package
 # We also need the unzip package to unpack the JBoss .zip archive
 #RUN yum install -y java-1.8.0-openjdk-devel unzip && yum clean all
+USER root
+RUN microdnf update && microdnf clean all
 RUN microdnf install -y java-1.8.0-openjdk-devel unzip && microdnf clean all
 
 # Create a system user and group for jboss, they both have a UID and GID of 1100
