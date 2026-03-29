@@ -1,0 +1,102 @@
+---
+- name: Fetch monthly files from remote server
+  hosts: APP03
+  vars:
+    month: '202512'
+    mm: "{{ month[4:6] }}"  # Extract the month part (MM)
+  tasks:
+    - name: Ensure local directories exist
+      local_action:
+        module: file
+        path: "/mnt/windows-share/{{ mm }}/DB/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - ACRA_DATA_MOD
+        - DB_USER_LOGGON
+        - ACRA_TABLE_MOD
+        - DB_USER_ACCT_MOD
+
+    - name: List files for gzipping in ACRA_DATA_MOD
+      command: find /db_dump_secondary/DB_AUDIT_LOG/DAILY/ACRA_DATA_MOD/ -name "ACRA_DATA_MOD_AUDIT_LOG_{{ month }}*.csv"
+      register: acra_files
+
+    - name: Gzip each file in ACRA_DATA_MOD
+      command: gzip "{{ item }}"
+      loop: "{{ acra_files.stdout_lines }}"
+      args:
+        removes: "{{ item }}"
+
+    - name: Check gzipped file size in ACRA_DATA_MOD
+      stat:
+        path: "{{ item }}.gz"
+      register: acra_stats
+      loop: "{{ acra_files.stdout_lines }}"
+
+    - name: Fetch gzipped files from ACRA_DATA_MOD
+      fetch:
+        src: "{{ item.item }}.gz"
+        dest: "/mnt/windows-share/{{ mm }}/DB/ACRA_DATA_MOD/"
+        flat: yes
+      loop: "{{ acra_stats.results }}"
+      when: item.stat.exists and item.stat.size > 0
+
+    - name: List files for gzipping in DB_USER_LOGGON
+      command: find /db_dump_secondary/DB_AUDIT_LOG/DAILY/DB_USER_LOGGON/ -name "DB_USER_LOGGON_AUDIT_LOG_{{ month }}*.csv"
+      register: user_logon_files
+
+    - name: Gzip each file in DB_USER_LOGGON
+      command: gzip "{{ item }}"
+      loop: "{{ user_logon_files.stdout_lines }}"
+      args:
+        removes: "{{ item }}"
+
+    - name: Check gzipped file size in DB_USER_LOGGON
+      stat:
+        path: "{{ item }}.gz"
+      register: logon_stats
+      loop: "{{ user_logon_files.stdout_lines }}"
+
+    - name: Fetch gzipped files from DB_USER_LOGGON
+      fetch:
+        src: "{{ item.item }}.gz"
+        dest: "/mnt/windows-share/{{ mm }}/DB/DB_USER_LOGGON/"
+        flat: yes
+      loop: "{{ logon_stats.results }}"
+      when: item.stat.exists and item.stat.size > 0
+
+    - name: List files in ACRA_TABLE_MOD
+      command: find /db_dump_secondary/DB_AUDIT_LOG/DAILY/ACRA_TABLE_MOD/ -name "ACRA_TABLE_MOD_AUDIT_LOG_{{ month }}*.csv"
+      register: table_files
+
+    - name: Check file size in ACRA_TABLE_MOD
+      stat:
+        path: "{{ item }}"
+      register: table_stats
+      loop: "{{ table_files.stdout_lines }}"
+
+    - name: Fetch files from ACRA_TABLE_MOD
+      fetch:
+        src: "{{ item.item }}"
+        dest: "/mnt/windows-share/{{ mm }}/DB/ACRA_TABLE_MOD/"
+        flat: yes
+      loop: "{{ table_stats.results }}"
+      when: item.stat.exists and item.stat.size > 0
+
+    - name: List files in DB_USER_ACCT_MOD
+      command: find /db_dump_secondary/DB_AUDIT_LOG/DAILY/DB_USER_ACCT_MOD/ -name "DB_USER_ACCT_MOD_AUDIT_LOG_{{ month }}*.csv"
+      register: acct_mod_files
+
+    - name: Check file size in DB_USER_ACCT_MOD
+      stat:
+        path: "{{ item }}"
+      register: acct_mod_stats
+      loop: "{{ acct_mod_files.stdout_lines }}"
+
+    - name: Fetch files from DB_USER_ACCT_MOD
+      fetch:
+        src: "{{ item.item }}"
+        dest: "/mnt/windows-share/{{ mm }}/DB/DB_USER_ACCT_MOD/"
+        flat: yes
+      loop: "{{ acct_mod_stats.results }}"
+      when: item.stat.exists and item.stat.size > 0
