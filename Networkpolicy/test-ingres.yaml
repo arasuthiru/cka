@@ -1,0 +1,17 @@
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-nginx-ingress
+  namespace: default
+spec:
+  selector: app == 'pod1'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP 
+    source:
+      selector: app == 'pod1'
+    destination:
+      ports:
+        - 80

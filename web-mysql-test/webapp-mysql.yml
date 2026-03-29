@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:  
+  labels:
+    name: webapp-mysql1
+  name: webapp-mysql1
+  namespace: alpha  
+spec:  
+  replicas: 1  
+  selector:
+    matchLabels:
+      name: webapp-mysql1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: webapp-mysql1
+      name: webapp-mysql1
+    spec:
+      containers:
+      - env:
+        - name: DB_Host
+          value: mysql-service
+        - name: DB_User
+          value: root
+        - name: DB_Password
+          value: paswrd
+        image: mmumshad/simple-webapp-mysql
+        imagePullPolicy: Always
+        name: webapp-mysql1
+        ports:
+        - containerPort: 8080
+          protocol: TCP        
