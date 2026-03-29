@@ -7,6 +7,7 @@ spec:
   - name: web-gateway
   hostnames:
   - "www.thirutech.com"
+  - "gitlab-tt.ddnsking.com"
   rules:
   - matches:
     - path:
