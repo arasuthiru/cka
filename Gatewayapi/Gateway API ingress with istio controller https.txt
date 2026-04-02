@@ -1,0 +1,447 @@
+Istio Gateway API with cert‑manager
+HTTP → HTTPS Redirect Guide
+
+Document Purpose
+This document provides a step‑by‑step guide to configuring Istio Gateway API with cert‑manager and Let’s Encrypt, including automatic HTTP to HTTPS redirection using standard Gateway API constructs.
+This approach avoids Kubernetes Ingress and Istio VirtualService and follows current best practices.
+
+1. Architecture Overview
+
+Client
+  ├── HTTP (80) ──► 301 Redirect
+  └── HTTPS (443)
+        ▼
+   Istio Gateway (TLS Termination)
+        ▼
+      HTTPRoute
+        ▼
+   Kubernetes Service
+        ▼
+        Pods
+		
+		2. Prerequisites
+
+Kubernetes v1.26 or later
+Istio installed with Gateway API enabled
+cert‑manager installed
+Public DNS record pointing to Istio ingress LoadBalancer IP
+A public domain name (example: example.com)
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: web-gateway
+  namespace: istio-system
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: example.com
+
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: example.com
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: example-com-tls
+		
+Note
+Port 80 must remain enabled for:
+
+HTTP → HTTPS redirection
+Let’s Encrypt HTTP‑01 validation
+
+4. HTTP → HTTPS Redirect Route
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-redirect
+  namespace: istio-system
+spec:
+  parentRefs:
+  - name: web-gateway
+    sectionName: http
+  hostnames:
+  - example.com
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+		
+		
+5. HTTPS Application Route
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-route
+  namespace: default
+spec:
+  parentRefs:
+  - name: web-gateway
+    namespace: istio-system
+    sectionName: https
+  hostnames:
+  - example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: app-service
+      port: 80
+	  
+✅ Application traffic is HTTPS‑only
+✅ Clear separation from redirect logic
+
+6. cert‑manager Integration
+
+cert‑manager creates and manages TLS certificates automatically
+Uses Let’s Encrypt HTTP‑01 challenge
+Gateway API serves the challenge on port 80
+Certificates are stored in Kubernetes Secrets
+Automatic renewal without downtime
+
+No Ingress annotations are required
+
+7. Validation
+Test HTTP redirect
+
+curl -I http://example.com
+
+Expected response
+
+HTTP/1.1 301 Moved Permanently
+Location: https://example.com/
+
+Test HTTPS
+curl https://example.com
+
+Best Practices
+
+Use Gateway API RequestRedirect (not Istio‑specific redirects)
+Keep separate HTTP and HTTPS routes
+Do not mix Gateway API with VirtualService
+Always use 301 for permanent redirects
+Keep port 80 open for certificate issuance
+
+########################
+
+Below is a practical, end‑to‑end guide to using Kubernetes Gateway API with cert-manager to obtain Let’s Encrypt SSL certificates.
+This example assumes:
+
+You already have a Kubernetes cluster
+A Gateway API–compatible controller (e.g. NGINX Gateway, Contour, Istio, Traefik, Envoy Gateway)
+A public DNS name pointing to your Gateway’s external IP / LoadBalancer
+
+
+Architecture Overview
+
+Internet
+   ↓
+LoadBalancer / Gateway
+   ↓ (TLS)
+Gateway API (Gateway + HTTPS Listener)
+   ↓
+HTTPRoute
+   ↓
+Service / Pod
+
+
+cert-manager automatically:
+
+Solves ACME challenges (HTTP-01 or DNS-01)
+Requests certificates from Let’s Encrypt
+Stores them as Kubernetes Secrets
+Gateway references those secrets for TLS
+
+
+Step 1: Install Gateway API CRDs
+
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+``
+
+kubectl get crds | grep gateway
+
+Step 2: Install cert-manager
+
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+
+Verify:
+
+kubectl get pods -n cert-manager
+
+Step 3: Create a Let’s Encrypt Issuer
+
+Option A – ClusterIssuer (recommended)
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    email: admin@example.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - kind: Gateway
+                name: web-gateway
+                namespace: gateway
+
+
+Use Let’s Encrypt staging first to avoid rate limits:
+
+https://acme-staging-v02.api.letsencrypt.org/directory
+
+Step 4: Create the Gateway with TLS
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: web-gateway
+  namespace: gateway
+spec:
+  gatewayClassName: nginx   # or contour / istio / traefik / envoy
+  listeners:
+    - name: https
+      port: 443
+      protocol: HTTPS
+      hostname: example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: example-com-tls
+			
+✅ The secret does not need to exist yet — cert-manager will create it.
+
+
+Step 5: Request a Certificate
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-com
+  namespace: gateway
+spec:
+  secretName: example-com-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - example.com
+	
+cert-manager will:
+
+Create a temporary HTTPRoute
+Solve the ACME HTTP-01 challenge
+Obtain and store the certificate in example-com-tls
+
+Check status:
+
+kubectl describe certificate example-com -n gateway
+
+Step 6: Create an HTTPRoute
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-route
+  namespace: app
+spec:
+  parentRefs:
+    - name: web-gateway
+      namespace: gateway
+  hostnames:
+    - example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: app-service
+          port: 80
+
+Step 7: (Optional) Redirect HTTP → HTTPS
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-redirect
+  namespace: gateway
+spec:
+  parentRefs:
+    - name: web-gateway
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+
+Verification
+
+kubectl get certificate -A
+kubectl get secret example-com-tls -n gateway
+
+Then test:
+
+curl https://example.com
+
+✅ You should see a valid Let’s Encrypt certificate.
+
+Common Pitfalls & Fixes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IssueFixCertificate stuck in PendingDNS not pointing to Gateway IPHTTP-01 challenge failsPort 80 not openWrong Issuer referenceIssuer vs ClusterIssuer mismatchRate limit errorsUse Let’s Encrypt staging first
+
+
+Production Recommendations
+✅ Use DNS-01 for wildcard certs (*.example.com)
+✅ Separate gateway, app, and cert-manager namespaces
+✅ Enable cert-manager monitoring
+✅ Use Gateway API instead of Ingress for future-proofing
+
+Want Next?
+I can:
+
+✅ Configure DNS-01 with Route53 / Cloudflare
+✅ Provide Istio / NGINX / Traefik–specific examples
+✅ Explain how cert-manager integrates internally with Gateway API
+✅ Convert from Ingress → Gateway API
+
+
+##############
+
+Option 2 (Recommended New Way): cert‑manager + Istio + Gateway API
+Istio now supports Kubernetes Gateway API, which integrates much better with cert‑manager.
+
+Step 1: Enable Gateway API in Istio
+
+istioctl install --set values.pilot.env.PILOT_ENABLE_GATEWAY_API=true
+
+Install Gateway API CRDs:
+
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+
+Step 2: ClusterIssuer (Gateway API solver)
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    email: admin@example.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: istio-gateway
+                namespace: gateway
+				
+Step 3: Gateway (TLS)
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: istio-gateway
+  namespace: gateway
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: https
+      port: 443
+      protocol: HTTPS
+      hostname: example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: example-com-tls
+			
+Step 4: Certificate
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-com
+  namespace: gateway
+spec:
+  secretName: example-com-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - example.com
+	
+Step 5: HTTPRoute
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-route
+  namespace: app
+spec:
+  parentRefs:
+    - name: istio-gateway
+      namespace: gateway
+  hostnames:
+    - example.com
+  rules:
+    - backendRefs:
+        - name: app-service
+          port: 80
+		  
+DNS‑01 (Wildcards & No Port 80)
+For:
+
+*.example.com
+Internal clusters
+Locked‑down firewalls
+
+✅ Use DNS‑01 (Cloudflare / Route53 / Azure DNS)
+I can provide a ready‑to‑run example.
+
+###
