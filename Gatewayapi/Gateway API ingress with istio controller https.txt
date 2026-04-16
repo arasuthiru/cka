@@ -445,3 +445,45 @@ Locked‑down firewalls
 I can provide a ready‑to‑run example.
 
 ###
+
+####################Working####################
+To enable HTTPS (port 443) on your Gateway using your own SSL certificate, you need to:
+
+Create a Kubernetes Secret containing your certificate and private key.
+Add an HTTPS Listener to your Gateway referencing that secret.
+(Optional) Update your HTTPRoute if you want to restrict routes to HTTPS only.
+
+kubectl create secret tls webserver-tls-secret \
+  --cert=tls.crt \
+  --key=tls.key \
+  -n <namespace>
+
+  kubectl create secret tls webserver-tls-secret \
+  --cert=tls.crt \
+  --key=tls.key 
+
+Replace <namespace> with the namespace where your Gateway/Route/Backend is deployed.
+
+kubectl get gateway -A
+
+thiru@DNB227N:~$ kubectl get httproute -A
+NAMESPACE   NAME                  HOSTNAMES                                        AGE
+default     webserver-httproute   ["www.thirutech.com","gitlab-tt.ddnsking.com"]   17d
+thiru@DNB227N:~$ kubectl get gateways.gateway.networking.k8s.io -A
+NAMESPACE   NAME          CLASS   ADDRESS         PROGRAMMED   AGE
+default     web-gateway   istio   192.168.50.31   True         17d
+thiru@DNB227N:~$ 
+
+thiru@DNB227N:~$ kubectl get svc -A
+NAMESPACE        NAME                          TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                                 AGE
+default          kubernetes                    ClusterIP      10.96.0.1        <none>          443/TCP                                 27d
+default          my-nginx                      LoadBalancer   10.104.24.163    192.168.50.30   80:30637/TCP                            19d
+default          web-gateway-istio             LoadBalancer   10.101.115.42    192.168.50.31   15021:31976/TCP,80:30790/TCP            17d
+
+after apply 443
+thiru@DNB227N:/mnt/c/Users/thiru/Documents/cka/Gatewayapi/istio$ kubectl get svc -A
+NAMESPACE        NAME                          TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                                      AGE
+default          kubernetes                    ClusterIP      10.96.0.1        <none>          443/TCP                                      27d
+default          my-nginx                      LoadBalancer   10.104.24.163    192.168.50.30   80:30637/TCP                                 19d
+default          web-gateway-istio             LoadBalancer   10.101.115.42    192.168.50.31   15021:31976/TCP,80:30790/TCP,443:30386/TCP   17d   <---
+#################
