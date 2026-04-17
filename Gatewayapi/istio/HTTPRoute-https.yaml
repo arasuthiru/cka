@@ -14,6 +14,35 @@ spec:
         - path:
             type: PathPrefix
             value: /
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: x-app-version
+                value: v1
+              - name: x-env
+                value: production
+              - name: x-custom-header
+                value: "custom-value"
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: x-powered-by
+                value: "Istio Gateway API"
+              - name: Strict-Transport-Security
+                value: 'max-age=31536000; includeSubDomains; preload'
+              - name: X-Frame-Options
+                value: 'DENY'
+              - name: X-Content-Type-Options
+                value: 'nosniff'
+              - name: Referrer-Policy
+                value: 'no-referrer'
+             #- name: Content-Security-Policy
+             #  value: "default-src 'self';"
+              - name: X-XSS-Protection
+                value: '1; mode=block'
+            remove:
+               - server
       backendRefs:
         - name: my-nginx
           port: 80

@@ -11,3 +11,8 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: x-env
+                value: production
